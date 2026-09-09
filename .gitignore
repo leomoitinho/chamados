@@ -1,0 +1,15 @@
+# Ambientes virtuais
+venv/
+ENV/
+env/
+
+# Arquivos de ambiente e sensíveis
+.env
+.env.local
+
+# Python e Node (dependências e caches)
+__pycache__/
+*.pyc
+node_modules/
+dist/
+build/
