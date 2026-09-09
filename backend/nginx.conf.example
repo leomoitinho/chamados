@@ -1,0 +1,56 @@
+# ====================================================================
+# Exemplo de Configuração Nginx:
+# Como rodar React + FastAPI no mesmo servidor que já possui Django
+# ====================================================================
+
+# 1. Bloco para o Sistema de Chamados (React Frontend + FastAPI Backend)
+server {
+    listen 80;
+    server_name chamados.suaempresa.com.br; # ou IP do seu servidor
+
+    # Frontend React (Arquivos estáticos compilados com 'npm run build')
+    root /home/leonardo/projetos/chamados/frontend-web/dist;
+    index index.html;
+
+    # Todas as rotas do frontend caem no index.html (SPA Router)
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # Backend FastAPI (Proxy Reverso para a porta 8000)
+    location /api/ {
+        proxy_pass http://127.0.0.1:8000/api/;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Documentação Swagger do FastAPI
+    location /docs {
+        proxy_pass http://127.0.0.1:8000/docs;
+        proxy_set_header Host $host;
+    }
+    location /openapi.json {
+        proxy_pass http://127.0.0.1:8000/api/v1/openapi.json;
+        proxy_set_header Host $host;
+    }
+}
+
+# 2. Seu Bloco Existente do Django (Continua intacto na porta 8001 ou socket)
+# server {
+#     listen 80;
+#     server_name sistema-antigo.suaempresa.com.br;
+#
+#     location / {
+#         proxy_pass http://127.0.0.1:8001; # Django Gunicorn
+#         proxy_set_header Host $host;
+#         proxy_set_header X-Real-IP $remote_addr;
+#     }
+#     location /static/ {
+#         alias /caminho/do/django/staticfiles/;
+#     }
+# }
