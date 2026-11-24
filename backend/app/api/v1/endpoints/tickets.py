@@ -30,6 +30,7 @@ def read_tickets(
     category_id: Optional[int] = None,
     assigned_to_id: Optional[int] = None,
     creator_id: Optional[int] = None,
+    my_tickets: Optional[bool] = False,
     search: Optional[str] = None,
     skip: int = 0,
     limit: int = 100,
@@ -39,6 +40,7 @@ def read_tickets(
     Listar chamados com filtros avançados:
     - Super Admin: lista chamados globais ou por empresa selecionada.
     - Company Admin e Company User: visualiza chamados da sua própria empresa.
+    - my_tickets=True: filtra chamados onde o usuário logado é o solicitante OU o técnico responsável.
     """
     query = db.query(Ticket)
 
@@ -50,6 +52,13 @@ def read_tickets(
         query = query.filter(Ticket.company_id == current_user.company_id)
 
     # Optional Filters
+    if my_tickets:
+        query = query.filter(
+            or_(
+                Ticket.creator_id == current_user.id,
+                Ticket.assigned_to_id == current_user.id
+            )
+        )
     if status is not None:
         query = query.filter(Ticket.status == status)
     if priority is not None:
@@ -200,17 +209,22 @@ def update_ticket(
     update_data = ticket_in.model_dump(exclude_unset=True)
     
     # Validar assigned_to
-    # Super Admins podem receber chamados de qualquer empresa (company_id deles é NULL)
-    if "assigned_to_id" in update_data and update_data["assigned_to_id"]:
-        assignee = db.query(User).filter(User.id == update_data["assigned_to_id"]).first()
-        if not assignee:
-            raise HTTPException(status_code=400, detail="Técnico atribuído não encontrado")
-        is_super_admin_assignee = assignee.role == UserRole.SUPER_ADMIN
-        if not is_super_admin_assignee and (current_user.role != UserRole.SUPER_ADMIN and assignee.company_id != ticket.company_id):
-            raise HTTPException(status_code=400, detail="Técnico atribuído não pertence à empresa do chamado")
+    # Super Admins podem atribuir qualquer usuário (ou a si mesmos)
+    if "assigned_to_id" in update_data:
+        if update_data["assigned_to_id"] is not None:
+            assignee = db.query(User).filter(User.id == update_data["assigned_to_id"]).first()
+            if not assignee:
+                raise HTTPException(status_code=400, detail="Técnico atribuído não encontrado")
+            is_super_admin_assignee = assignee.role == UserRole.SUPER_ADMIN
+            if not is_super_admin_assignee and (current_user.role != UserRole.SUPER_ADMIN and assignee.company_id != ticket.company_id):
+                raise HTTPException(status_code=400, detail="Técnico atribuído não pertence à empresa do chamado")
+            ticket.assigned_to_id = update_data["assigned_to_id"]
+        else:
+            ticket.assigned_to_id = None
 
     for field, value in update_data.items():
-        setattr(ticket, field, value)
+        if field != "assigned_to_id":
+            setattr(ticket, field, value)
 
     db.commit()
     db.refresh(ticket)

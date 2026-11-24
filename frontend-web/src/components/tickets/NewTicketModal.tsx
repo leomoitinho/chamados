@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Plus, AlertCircle, Sparkles } from 'lucide-react';
 import { Category, Company, TicketPriority } from '../../types';
-import { ticketService, categoryService, companyService } from '../../services/api';
+import { ticketService, categoryService, companyService, userService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 
 interface NewTicketModalProps {
@@ -15,15 +15,17 @@ export const NewTicketModal: React.FC<NewTicketModalProps> = ({
   onClose, 
   onTicketCreated 
 }) => {
-  const { user, isSuperAdmin } = useAuth();
+  const { user, isSuperAdmin, isCompanyAdmin } = useAuth();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState<TicketPriority>('MEDIUM');
   const [categoryId, setCategoryId] = useState<number | undefined>();
   const [companyId, setCompanyId] = useState<number | undefined>(user?.company_id || undefined);
+  const [assignedToId, setAssignedToId] = useState<number | undefined>();
   
   const [categories, setCategories] = useState<Category[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
+  const [technicians, setTechnicians] = useState<any[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
@@ -32,6 +34,21 @@ export const NewTicketModal: React.FC<NewTicketModalProps> = ({
       loadInitialData();
     }
   }, [isOpen]);
+
+  useEffect(() => {
+    if (isOpen && (isSuperAdmin || isCompanyAdmin)) {
+      loadTechnicians(isSuperAdmin ? companyId : user?.company_id || undefined);
+    }
+  }, [isOpen, companyId]);
+
+  const loadTechnicians = async (targetCompanyId?: number) => {
+    try {
+      const usersList = await userService.list(targetCompanyId, true);
+      setTechnicians(usersList);
+    } catch (e) {
+      console.error('Erro ao carregar técnicos:', e);
+    }
+  };
 
   const loadInitialData = async () => {
     try {
@@ -77,12 +94,14 @@ export const NewTicketModal: React.FC<NewTicketModalProps> = ({
         priority,
         category_id: categoryId,
         company_id: isSuperAdmin ? companyId : undefined,
+        assigned_to_id: (isSuperAdmin || isCompanyAdmin) ? assignedToId : undefined,
       });
 
       // Reset form
       setTitle('');
       setDescription('');
       setPriority('MEDIUM');
+      setAssignedToId(undefined);
       onTicketCreated();
       onClose();
     } catch (err: any) {
@@ -196,6 +215,44 @@ export const NewTicketModal: React.FC<NewTicketModalProps> = ({
               </select>
             </div>
           </div>
+
+          {/* Técnico Responsável (Para Super Admin ou Admin de Empresa) */}
+          {(isSuperAdmin || isCompanyAdmin) && (
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                Atribuir Técnico Responsável (Opcional)
+              </label>
+              <select
+                value={assignedToId || ''}
+                onChange={(e) => setAssignedToId(e.target.value ? Number(e.target.value) : undefined)}
+                className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white focus:outline-none focus:border-indigo-500"
+              >
+                <option value="">Não atribuído no momento</option>
+                {technicians.filter(t => t.role === 'SUPER_ADMIN').length > 0 && (
+                  <optgroup label="⭐ Super Administradores (Global)">
+                    {technicians
+                      .filter(t => t.role === 'SUPER_ADMIN')
+                      .map((t) => (
+                        <option key={t.id} value={t.id}>
+                          ⭐ {t.full_name}
+                        </option>
+                      ))}
+                  </optgroup>
+                )}
+                {technicians.filter(t => t.role !== 'SUPER_ADMIN').length > 0 && (
+                  <optgroup label="👤 Técnicos da Empresa">
+                    {technicians
+                      .filter(t => t.role !== 'SUPER_ADMIN')
+                      .map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.full_name} ({t.department || t.role})
+                        </option>
+                      ))}
+                  </optgroup>
+                )}
+              </select>
+            </div>
+          )}
 
           {/* Description */}
           <div>

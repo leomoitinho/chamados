@@ -30,15 +30,33 @@ O sistema implementa **Isolamento Multi-Tenant Estrito** com controle de acesso 
 ### 👥 Matriz de Permissões:
 1. **👑 Super Administrador Geral (`SUPER_ADMIN`)**:
    - Visualiza e gerencia chamados de **todas as empresas**.
-   - Cria, edita e desativa **empresas** e **usuários de qualquer empresa**.
-   - Acesso ao painel analítico global com comparativo de SLAs e volume de tickets por organização.
+   - Cria, edita e desativa **empresas** e **usuários de qualquer organização**.
+   - Atribui ou assume chamados como técnico responsável em qualquer tenant.
+   - Painel analítico global com comparativo de SLAs e volume de tickets por organização.
 2. **🏢 Administrador da Empresa (`COMPANY_ADMIN`)**:
    - Visualiza todos os chamados da **sua própria empresa**.
    - **Pode cadastrar e gerenciar novos usuários e técnicos para a sua empresa**.
+   - Atribui técnicos aos chamados da sua empresa.
    - Não possui acesso a dados de outras organizações (isolamento 100% garantido).
 3. **👤 Usuário / Solicitante (`COMPANY_USER`)**:
    - Cria, acompanha e responde chamados da sua própria empresa.
+   - Filtra rapidamente os próprios chamados no botão "Apenas Meus".
    - **Não pode criar ou alterar outros usuários** (gerencia apenas seu próprio perfil e senha).
+
+---
+
+## 🚀 Novas Funcionalidades Recentes
+
+- 🛠️ **Atribuição & Desatribuição Dinâmica de Técnicos**:
+  - Atribuição de responsável diretamente no modal de criação (`NewTicketModal`) ou na tela de detalhes do chamado (`TicketDetailModal`).
+  - Suporte completo a desatribuir técnicos (retornando para "Não Atribuído") com feedback visual instantâneo.
+- 📊 **Dashboard Interativo com Cliques Filtrados**:
+  - Cliques em cards de métricas (Total, Abertos, Em Andamento, Pendentes, Resolvidos, Urgentes) redirecionam direto para o painel de chamados com os filtros aplicados.
+  - Tabela Multi-Tenant de empresas permite ao Super Admin clicar em qualquer empresa e visualizar os chamados daquela organização específica.
+- 🚨 **Alerta de SLA Estourado & Notificação de Chamados Atribuídos**:
+  - Banners de alerta visual no topo do Dashboard notificando chamados atribuídos ao usuário logado e chamados em atraso crítico de SLA (Urgente: 4h, Alta: 24h, Média: 48h, Baixa: 72h).
+- 🔍 **Filtro Inteligente "Apenas Meus"**:
+  - Filtra instantaneamente chamados onde o usuário logado é o **solicitante** ou o **técnico responsável**.
 
 ---
 
@@ -51,11 +69,11 @@ chamados/
 │   │   ├── core/             # Configurações .env, Conexão MySQL, Segurança JWT
 │   │   ├── models/           # Company, User, Ticket, Comment, Category
 │   │   ├── schemas/          # Schemas Pydantic v2
-│   │   ├── api/              # Endpoints v1 com RBAC e regras de Tenant
+│   │   ├── api/              # Endpoints v1 com RBAC, SLA e regras de Tenant
 │   │   ├── db_seed.py        # Script inicial para semear banco de dados
 │   │   └── main.py           # Ponto de entrada FastAPI com CORS e Swagger UI
 │   ├── requirements.txt
-│   ├── .env
+│   ├── .env.example
 │   └── nginx.conf.example    # Exemplo pronto para rodar com Django existente
 │
 ├── frontend-web/             # Dashboard Web & Desktop em React + Vite + Tailwind
@@ -90,7 +108,7 @@ chamados/
 
 2. **Configure o arquivo `.env` (caso necessário):**
    ```env
-   DATABASE_URL=mysql+pymysql://chamados_user:chamados_pass_2026@localhost:3306/chamados_db?charset=utf8mb4
+   DATABASE_URL=mysql+pymysql://chamados_user:chamados_pass_2026@localhost:3306/chamados_test_db?charset=utf8mb4
    ```
 
 3. **Popule o banco com dados de teste:**

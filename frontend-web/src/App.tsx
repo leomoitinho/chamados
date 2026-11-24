@@ -14,6 +14,21 @@ const AppContent: React.FC = () => {
   const [currentTab, setCurrentTab] = useState('dashboard');
   const [selectedTicketId, setSelectedTicketId] = useState<number | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [ticketFilters, setTicketFilters] = useState<{
+    status?: string;
+    priority?: string;
+    company?: string;
+    my_tickets?: boolean;
+  }>({});
+
+  const triggerRefresh = () => {
+    setRefreshTrigger((prev) => prev + 1);
+  };
+
+  const handleNavigateToTicketsWithFilters = (filters?: { status?: string; priority?: string; company?: string; my_tickets?: boolean }) => {
+    setTicketFilters(filters || {});
+    setCurrentTab('tickets');
+  };
 
   if (loading) {
     return (
@@ -27,10 +42,6 @@ const AppContent: React.FC = () => {
     return <Login />;
   }
 
-  const triggerRefresh = () => {
-    setRefreshTrigger((prev) => prev + 1);
-  };
-
   const renderCurrentPage = () => {
     switch (currentTab) {
       case 'dashboard':
@@ -38,14 +49,18 @@ const AppContent: React.FC = () => {
           <Dashboard
             key={refreshTrigger}
             onSelectTicket={(id) => setSelectedTicketId(id)}
-            onNavigateToTickets={() => setCurrentTab('tickets')}
+            onNavigateToTickets={handleNavigateToTicketsWithFilters}
           />
         );
       case 'tickets':
         return (
           <Tickets
-            key={refreshTrigger}
+            key={`${refreshTrigger}-${ticketFilters.status || ''}-${ticketFilters.priority || ''}-${ticketFilters.company || ''}-${ticketFilters.my_tickets ? '1' : '0'}`}
             onSelectTicket={(id) => setSelectedTicketId(id)}
+            initialStatus={ticketFilters.status}
+            initialPriority={ticketFilters.priority}
+            initialCompany={ticketFilters.company}
+            initialMyTickets={ticketFilters.my_tickets}
             onOpenNewTicket={() => {
               // Handled through layout button or tab
             }}
@@ -64,7 +79,7 @@ const AppContent: React.FC = () => {
           <Dashboard
             key={refreshTrigger}
             onSelectTicket={(id) => setSelectedTicketId(id)}
-            onNavigateToTickets={() => setCurrentTab('tickets')}
+            onNavigateToTickets={handleNavigateToTicketsWithFilters}
           />
         );
     }

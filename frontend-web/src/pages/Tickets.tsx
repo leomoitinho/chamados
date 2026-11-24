@@ -20,9 +20,20 @@ import {
 interface TicketsProps {
   onSelectTicket: (id: number) => void;
   onOpenNewTicket: () => void;
+  initialStatus?: string;
+  initialPriority?: string;
+  initialCompany?: string;
+  initialMyTickets?: boolean;
 }
 
-export const Tickets: React.FC<TicketsProps> = ({ onSelectTicket, onOpenNewTicket }) => {
+export const Tickets: React.FC<TicketsProps> = ({ 
+  onSelectTicket, 
+  onOpenNewTicket,
+  initialStatus,
+  initialPriority,
+  initialCompany,
+  initialMyTickets,
+}) => {
   const { user, isSuperAdmin } = useAuth();
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -34,11 +45,27 @@ export const Tickets: React.FC<TicketsProps> = ({ onSelectTicket, onOpenNewTicke
 
   // Filters State
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState<string>('');
-  const [selectedPriority, setSelectedPriority] = useState<string>('');
+  const [selectedStatus, setSelectedStatus] = useState<string>(initialStatus || '');
+  const [selectedPriority, setSelectedPriority] = useState<string>(initialPriority || '');
   const [selectedCategory, setSelectedCategory] = useState<string>('');
-  const [selectedCompany, setSelectedCompany] = useState<string>('');
-  const [onlyMyTickets, setOnlyMyTickets] = useState(false);
+  const [selectedCompany, setSelectedCompany] = useState<string>(initialCompany || '');
+  const [onlyMyTickets, setOnlyMyTickets] = useState(!!initialMyTickets);
+
+  useEffect(() => {
+    if (initialStatus !== undefined) setSelectedStatus(initialStatus);
+  }, [initialStatus]);
+
+  useEffect(() => {
+    if (initialPriority !== undefined) setSelectedPriority(initialPriority);
+  }, [initialPriority]);
+
+  useEffect(() => {
+    if (initialCompany !== undefined) setSelectedCompany(initialCompany);
+  }, [initialCompany]);
+
+  useEffect(() => {
+    if (initialMyTickets !== undefined) setOnlyMyTickets(initialMyTickets);
+  }, [initialMyTickets]);
 
   useEffect(() => {
     loadAuxData();
@@ -70,7 +97,7 @@ export const Tickets: React.FC<TicketsProps> = ({ onSelectTicket, onOpenNewTicke
       if (selectedPriority) params.priority = selectedPriority;
       if (selectedCategory) params.category_id = Number(selectedCategory);
       if (selectedCompany && isSuperAdmin) params.company_id = Number(selectedCompany);
-      if (onlyMyTickets && user) params.creator_id = user.id;
+      if (onlyMyTickets) params.my_tickets = true;
       if (searchTerm) params.search = searchTerm;
 
       const data = await ticketService.list(params);

@@ -96,15 +96,25 @@ export const TicketDetailModal: React.FC<TicketDetailModalProps> = ({
     }
   };
 
+  const [updatingAssignee, setUpdatingAssignee] = useState(false);
+  const [assigneeSuccessMsg, setAssigneeSuccessMsg] = useState('');
+
   const handleAssigneeChange = async (userId: string) => {
     if (!ticket) return;
     try {
-      const assignedId = userId ? parseInt(userId) : undefined;
-      await ticketService.update(ticket.id, { assigned_to_id: assignedId });
+      setUpdatingAssignee(true);
+      setAssigneeSuccessMsg('');
+      const assignedId = userId ? parseInt(userId) : null;
+      await ticketService.update(ticket.id, { assigned_to_id: assignedId as any });
       await fetchDetails();
       onTicketUpdated();
-    } catch (e) {
+      setAssigneeSuccessMsg('Técnico atualizado com sucesso!');
+      setTimeout(() => setAssigneeSuccessMsg(''), 3000);
+    } catch (e: any) {
       console.error('Erro ao atribuir técnico:', e);
+      alert(e.response?.data?.detail || 'Erro ao atribuir técnico.');
+    } finally {
+      setUpdatingAssignee(false);
     }
   };
 
@@ -313,12 +323,21 @@ export const TicketDetailModal: React.FC<TicketDetailModalProps> = ({
 
                   {/* Responsável Técnico */}
                   <div className="p-3 rounded-lg bg-slate-900 border border-slate-800">
-                    <span className="text-slate-500 block mb-1">Técnico Responsável</span>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-slate-500 block text-xs">Técnico Responsável</span>
+                      {updatingAssignee && (
+                        <span className="text-[10px] text-indigo-400 animate-pulse font-medium">Salvando...</span>
+                      )}
+                      {assigneeSuccessMsg && (
+                        <span className="text-[10px] text-emerald-400 font-medium">{assigneeSuccessMsg}</span>
+                      )}
+                    </div>
                     {(isSuperAdmin || isCompanyAdmin) ? (
                       <select
                         value={ticket.assigned_to_id || ''}
+                        disabled={updatingAssignee}
                         onChange={(e) => handleAssigneeChange(e.target.value)}
-                        className="w-full mt-1 px-2.5 py-1.5 bg-slate-950 border border-slate-700 rounded-lg text-xs text-white focus:border-indigo-500"
+                        className="w-full mt-1 px-2.5 py-1.5 bg-slate-950 border border-slate-700 rounded-lg text-xs text-white focus:border-indigo-500 disabled:opacity-50"
                       >
                         <option value="">Não Atribuído</option>
                         {/* SuperAdmins primeiro, separados visualmente */}

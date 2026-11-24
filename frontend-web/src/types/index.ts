@@ -102,6 +102,9 @@ export interface DashboardMetrics {
   resolved_tickets: number;
   closed_tickets: number;
   urgent_tickets: number;
+  assigned_to_me_count?: number;
+  overdue_sla_count?: number;
+  critical_pending_count?: number;
   total_companies?: number;
   total_users?: number;
   by_status: { status: string; count: number }[];

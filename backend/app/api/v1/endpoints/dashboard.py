@@ -34,6 +34,36 @@ def read_dashboard_metrics(
     closed_tickets = ticket_query.filter(Ticket.status == TicketStatus.CLOSED).count()
     urgent_tickets = ticket_query.filter(Ticket.priority == TicketPriority.URGENT).count()
 
+    # Chamados atribuídos especificamente ao usuário logado (abertos ou em andamento)
+    assigned_to_me_count = db.query(Ticket).filter(
+        Ticket.assigned_to_id == current_user.id,
+        Ticket.status.in_([TicketStatus.OPEN, TicketStatus.IN_PROGRESS, TicketStatus.PENDING])
+    ).count()
+
+    # Cálculo de SLA estourado / Atrasados:
+    # URGENT: > 4 horas | HIGH: > 24 horas | MEDIUM: > 48 horas | LOW: > 72 horas
+    from datetime import datetime, timedelta
+    now = datetime.utcnow()
+    active_tickets = ticket_query.filter(
+        Ticket.status.in_([TicketStatus.OPEN, TicketStatus.IN_PROGRESS])
+    ).all()
+
+    overdue_sla_count = 0
+    critical_pending_count = 0
+    sla_limits = {
+        TicketPriority.URGENT: timedelta(hours=4),
+        TicketPriority.HIGH: timedelta(hours=24),
+        TicketPriority.MEDIUM: timedelta(hours=48),
+        TicketPriority.LOW: timedelta(hours=72),
+    }
+
+    for t in active_tickets:
+        limit = sla_limits.get(t.priority, timedelta(hours=48))
+        if (now - t.created_at) > limit:
+            overdue_sla_count += 1
+            if t.priority in [TicketPriority.URGENT, TicketPriority.HIGH]:
+                critical_pending_count += 1
+
     # By Status
     by_status = [
         StatusCount(status=TicketStatus.OPEN.value, count=open_tickets),
@@ -83,6 +113,9 @@ def read_dashboard_metrics(
         resolved_tickets=resolved_tickets,
         closed_tickets=closed_tickets,
         urgent_tickets=urgent_tickets,
+        assigned_to_me_count=assigned_to_me_count,
+        overdue_sla_count=overdue_sla_count,
+        critical_pending_count=critical_pending_count,
         total_companies=total_companies,
         total_users=total_users,
         by_status=by_status,

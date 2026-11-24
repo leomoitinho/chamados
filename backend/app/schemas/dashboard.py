@@ -24,6 +24,9 @@ class DashboardMetricsOut(BaseModel):
     resolved_tickets: int
     closed_tickets: int
     urgent_tickets: int
+    assigned_to_me_count: int = 0
+    overdue_sla_count: int = 0
+    critical_pending_count: int = 0
     total_companies: Optional[int] = None
     total_users: Optional[int] = None
     by_status: List[StatusCount]

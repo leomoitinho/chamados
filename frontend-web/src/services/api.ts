@@ -105,6 +105,7 @@ export const ticketService = {
     category_id?: number;
     assigned_to_id?: number;
     creator_id?: number;
+    my_tickets?: boolean;
     search?: string;
     skip?: number;
     limit?: number;
